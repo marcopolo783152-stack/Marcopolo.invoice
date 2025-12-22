@@ -28,7 +28,11 @@ export default function InvoicesList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Invoices</h2>
-        <Link href="/dashboard/invoices/new" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">New Invoice</Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/invoices/new" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">New Invoice</Link>
+          {/* Excel export button */}
+          <div className="inline-block"><(await import("@/components/InvoiceExport")).default /></div>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full border rounded">
