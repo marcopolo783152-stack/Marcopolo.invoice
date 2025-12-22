@@ -1,3 +1,4 @@
+// Force redeploy to clear Vercel cache
 import { PrintInvoice, PrintInvoiceProps } from "@/components/PrintInvoice";
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
