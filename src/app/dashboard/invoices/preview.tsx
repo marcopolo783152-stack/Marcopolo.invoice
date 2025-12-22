@@ -35,7 +35,6 @@ export default function InvoicePreviewPage() {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: sampleInvoice.id,
-    removeAfterPrint: true,
   });
 
   return (
