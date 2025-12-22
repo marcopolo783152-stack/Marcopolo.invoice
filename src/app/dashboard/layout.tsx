@@ -1,9 +1,8 @@
-// ...existing code...
-// Move all imports to the very top of the file
 "use client";
 import { useAuthWithRole } from "@/lib/useAuthWithRole";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Sidebar from "@/components/Sidebar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, role, loading } = useAuthWithRole();
@@ -29,5 +28,4 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 p-8">{children}</main>
     </div>
   );
-import Sidebar from "@/components/Sidebar";
 }
