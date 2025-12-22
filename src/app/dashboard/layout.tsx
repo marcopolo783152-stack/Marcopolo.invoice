@@ -1,3 +1,5 @@
+// ...existing code...
+// Move all imports to the very top of the file
 "use client";
 import { useAuthWithRole } from "@/lib/useAuthWithRole";
 import { useRouter } from "next/navigation";

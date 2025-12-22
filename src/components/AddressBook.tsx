@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
@@ -28,17 +29,25 @@ export default function AddressBook() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    if (!user) {
+      setError("User not authenticated.");
+      setLoading(false);
+      return;
+    }
     try {
       // Prevent duplicates by email or phone
       const q = query(collection(db, "addressBook"), where("email", "==", form.email));
       const snap = await getDocs(q);
       if (!snap.empty) throw new Error("Duplicate customer (email)");
-      await addDoc(collection(db, "addressBook"), { ...form, userId: user?.uid });
+      await addDoc(collection(db, "addressBook"), { ...form, userId: user.uid });
       setForm({ firstName: "", lastName: "", address: "", city: "", state: "", zip: "", phone: "", email: "" });
       // Refresh list
-      const q2 = role === "admin"
-        ? query(collection(db, "addressBook"))
-        : query(collection(db, "addressBook"), where("userId", "==", user.uid));
+      let q2;
+      if (role === "admin") {
+        q2 = query(collection(db, "addressBook"));
+      } else {
+        q2 = query(collection(db, "addressBook"), where("userId", "==", user.uid));
+      }
       getDocs(q2).then((snap) => {
         setCustomers(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       });

@@ -1,3 +1,5 @@
+// ...existing code...
+// Fix redirect usage to use the correct Next.js App Router method
 import Image from "next/image";
 
 export default function Home() {
