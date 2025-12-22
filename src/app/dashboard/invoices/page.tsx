@@ -6,11 +6,16 @@ import { useAuthWithRole } from "@/lib/useAuthWithRole";
 
 import Link from "next/link";
 import InvoiceExport from "@/components/InvoiceExport";
+import AdminKeyModal from "@/components/AdminKeyModal";
+import { deleteDoc, doc } from "firebase/firestore";
 
 export default function InvoicesList() {
   const { user, role } = useAuthWithRole();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -23,6 +28,25 @@ export default function InvoicesList() {
       setLoading(false);
     });
   }, [user, role]);
+
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+    setShowAdminModal(true);
+  };
+
+  const confirmDelete = async (key: string) => {
+    setShowAdminModal(false);
+    // Replace 'your-admin-key' with your real admin key or env var
+    if (key !== process.env.NEXT_PUBLIC_ADMIN_KEY) {
+      setError("Invalid admin key");
+      return;
+    }
+    if (deleteId) {
+      await deleteDoc(doc(db, "invoices", deleteId));
+      setInvoices(invoices.filter(inv => inv.id !== deleteId));
+      setDeleteId(null);
+    }
+  };
 
   if (loading) return <div>Loading invoices...</div>;
 
@@ -56,14 +80,22 @@ export default function InvoicesList() {
                 <td className="p-2">{inv.total?.toFixed(2)}</td>
                 <td className="p-2">{inv.paid ? <span className="text-green-600">Paid</span> : <span className="text-red-600">Unpaid</span>}</td>
                 <td className="p-2">{inv.createdAt?.toDate?.().toLocaleDateString?.() || "-"}</td>
-                <td className="p-2">
+                <td className="p-2 flex gap-2">
                   <Link href={`/dashboard/invoices/preview?id=${inv.id}`} className="text-blue-600 hover:underline">View</Link>
+                  <button onClick={() => handleDelete(inv.id)} className="text-red-600 hover:underline">Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+    {showAdminModal && (
+      <AdminKeyModal
+        onConfirm={confirmDelete}
+        onCancel={() => setShowAdminModal(false)}
+      />
+    )}
+    {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
+  </div>
   );
 }

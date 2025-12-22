@@ -9,6 +9,8 @@ export interface PrintInvoiceProps {
       name: string;
       address: string;
       phone: string;
+      fax?: string;
+      website?: string;
       email: string;
       logoUrl?: string;
     };
@@ -36,8 +38,15 @@ export const PrintInvoice = React.forwardRef<HTMLDivElement, PrintInvoiceProps>(
   <div ref={ref} className="bg-white text-black w-[210mm] min-h-[297mm] p-12 mx-auto rounded shadow-lg font-sans print:w-full print:min-h-0 print:rounded-none print:shadow-none">
     <div className="flex justify-between items-center mb-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">INVOICE</h1>
-        <div className="text-sm text-zinc-600">Invoice ID: {invoice.id}</div>
+        <img src={invoice.company.logoUrl || "/marcopolo-logo.png"} alt="Company Logo" className="h-20 object-contain mb-2" />
+        <h1 className="text-3xl font-bold mb-2">MARCO POLO ORIENTAL RUGS, INC.</h1>
+        <div className="text-sm text-zinc-600">3260 DUKE ST</div>
+        <div className="text-sm text-zinc-600">ALEXANDRIA, VA 22314</div>
+        <div className="text-sm text-zinc-600">Phone: 703-461-0207</div>
+        <div className="text-sm text-zinc-600">Fax: 703-461-0208</div>
+        <div className="text-sm text-zinc-600">Website: www.marcopolorugs.com</div>
+        <div className="text-sm text-zinc-600">Email: marcopolorugs@aol.com</div>
+        <div className="text-sm text-zinc-600 mt-2">Invoice ID: {invoice.id}</div>
         <div className="text-sm text-zinc-600">Date: {invoice.date}</div>
         <div className="text-sm text-zinc-600">Due: {invoice.dueDate}</div>
       </div>

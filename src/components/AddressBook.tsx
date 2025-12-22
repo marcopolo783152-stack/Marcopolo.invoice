@@ -13,11 +13,38 @@ export default function AddressBook() {
 
   useEffect(() => {
     if (!user) return;
+    // Fetch address book
     const q = role === "admin"
       ? query(collection(db, "addressBook"))
       : query(collection(db, "addressBook"), where("userId", "==", user.uid));
     getDocs(q).then((snap) => {
       setCustomers(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+    // Auto-populate from invoices
+    getDocs(query(collection(db, "invoices"))).then((snap) => {
+      const invoiceCustomers = snap.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          firstName: d.customer?.name?.split(" ")[0] || "",
+          lastName: d.customer?.name?.split(" ").slice(1).join(" ") || "",
+          address: d.customer?.address || "",
+          city: d.customer?.city || "",
+          state: d.customer?.state || "",
+          zip: d.customer?.zip || "",
+          phone: d.customer?.phone || "",
+          email: d.customer?.email || "",
+          userId: d.userId || "",
+        };
+      });
+      invoiceCustomers.forEach(async (c) => {
+        if (!c.email && !c.phone) return;
+        // Prevent duplicates
+        const q = query(collection(db, "addressBook"), where("email", "==", c.email));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          await addDoc(collection(db, "addressBook"), c);
+        }
+      });
     });
   }, [user, role]);
 
