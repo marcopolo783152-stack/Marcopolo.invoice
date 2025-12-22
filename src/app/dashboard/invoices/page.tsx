@@ -16,17 +16,24 @@ export default function InvoicesList() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [fetchError, setFetchError] = useState("");
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
+    setFetchError("");
     const q = role === "admin"
       ? query(collection(db, "invoices"), orderBy("createdAt", "desc"))
       : query(collection(db, "invoices"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-    getDocs(q).then((snap) => {
-      setInvoices(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    });
+    getDocs(q)
+      .then((snap) => {
+        setInvoices(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setLoading(false);
+      })
+      .catch((err) => {
+        setFetchError(err.message || "Failed to fetch invoices");
+        setLoading(false);
+      });
   }, [user, role]);
 
   const handleDelete = (id: string) => {
@@ -49,6 +56,20 @@ export default function InvoicesList() {
   };
 
   if (loading) return <div>Loading invoices...</div>;
+  if (fetchError) return <div className="text-red-600 p-4">Error loading invoices: {fetchError}</div>;
+  if (!invoices.length) return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Invoices</h2>
+        <div className="flex gap-2">
+          <Link href="/dashboard/invoices/new" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">New Invoice</Link>
+          {/* Excel export button */}
+          <div className="inline-block"><InvoiceExport /></div>
+        </div>
+      </div>
+      <div className="p-8 text-center text-zinc-500">No invoices found. Click "New Invoice" to create your first invoice.</div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
