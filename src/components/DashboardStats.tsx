@@ -1,0 +1,47 @@
+import { ChartBarIcon, DocumentCheckIcon, DocumentTextIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+
+const stats = [
+  {
+    name: "Total Invoices",
+    value: "-",
+    icon: DocumentTextIcon,
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200",
+  },
+  {
+    name: "Paid Invoices",
+    value: "-",
+    icon: DocumentCheckIcon,
+    color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200",
+  },
+  {
+    name: "Unpaid Invoices",
+    value: "-",
+    icon: DocumentTextIcon,
+    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200",
+  },
+  {
+    name: "Customers",
+    value: "-",
+    icon: UserGroupIcon,
+    color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200",
+  },
+];
+
+export default function DashboardStats() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {stats.map((stat) => (
+        <div
+          key={stat.name}
+          className={`flex items-center gap-4 p-6 rounded-xl shadow bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 ${stat.color}`}
+        >
+          <stat.icon className="w-8 h-8" />
+          <div>
+            <div className="text-2xl font-bold">{stat.value}</div>
+            <div className="text-sm font-medium opacity-80">{stat.name}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
