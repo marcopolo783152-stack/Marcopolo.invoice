@@ -6,7 +6,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 16 },
   heading: { fontSize: 20, fontWeight: 700, marginBottom: 8 },
   label: { fontWeight: 700 },
-  table: { display: "table", width: "auto", marginVertical: 8 },
+  table: { width: "100%", flexDirection: "column", marginVertical: 8 },
   row: { flexDirection: "row" },
   cell: { flex: 1, padding: 4, borderBottom: "1pt solid #eee" },
 });
