@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { useAuthWithRole } from "@/lib/useAuthWithRole";
@@ -98,20 +98,20 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
 
   // Simple signature pad using canvas
   const SignaturePad = () => {
-    const canvasRef = useState<HTMLCanvasElement | null>(null)[0];
-    let drawing = false;
-    let lastX = 0;
-    let lastY = 0;
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const drawingRef = useRef(false);
+    const lastXRef = useRef(0);
+    const lastYRef = useRef(0);
 
     const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      drawing = true;
+      drawingRef.current = true;
       const rect = e.currentTarget.getBoundingClientRect();
-      lastX = e.clientX - rect.left;
-      lastY = e.clientY - rect.top;
+      lastXRef.current = e.clientX - rect.left;
+      lastYRef.current = e.clientY - rect.top;
     };
     const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!drawing) return;
-      const canvas = canvasRef;
+      if (!drawingRef.current) return;
+      const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -119,17 +119,17 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
+      ctx.moveTo(lastXRef.current, lastYRef.current);
       ctx.lineTo(x, y);
       ctx.stroke();
-      lastX = x;
-      lastY = y;
+      lastXRef.current = x;
+      lastYRef.current = y;
     };
     const stopDrawing = () => {
-      drawing = false;
+      drawingRef.current = false;
     };
     const clear = () => {
-      const canvas = canvasRef;
+      const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -137,7 +137,7 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
       setSignatureData(null);
     };
     const save = () => {
-      const canvas = canvasRef;
+      const canvas = canvasRef.current;
       if (!canvas) return;
       setSignatureData(canvas.toDataURL());
     };
@@ -145,7 +145,7 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
       <div className="my-4">
         <label className="block mb-2 font-semibold">Customer Signature:</label>
         <canvas
-          ref={ref => (canvasRef as any) = ref}
+          ref={canvasRef}
           width={300}
           height={100}
           style={{ border: "1px solid #ccc", background: "#fff" }}
