@@ -33,7 +33,7 @@ const sampleInvoice: PrintInvoiceProps["invoice"] = {
 export default function InvoicePreviewPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: sampleInvoice.id,
     removeAfterPrint: true,
   });
