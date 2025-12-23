@@ -1,4 +1,5 @@
 
+import React from "react";
 import InvoiceTemplate, { InvoiceTemplateProps } from "./InvoiceTemplate";
 
 export type { InvoiceTemplateProps as PrintInvoiceProps };
