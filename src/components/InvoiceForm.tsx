@@ -1,68 +1,53 @@
 "use client";
+
 import { useState, useRef } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { useAuthWithRole } from "@/lib/useAuthWithRole";
+import { calculateInvoice, InvoiceMode, InvoiceItem } from "@/lib/calculations";
 
-const defaultItem = {
+const makeDefaultItem = () => ({
+  id: Math.random().toString(36).slice(2),
   description: "",
   quantity: 1,
-  price: 0,
-  shape: "Rectangular", // Rectangular or Round
-  width: 0,
-  length: 0,
-  diameter: 0,
-  area: 0,
-};
+  pricePerSqFt: 0,
+  fixedPrice: 0,
+  widthFeet: 0,
+  widthInches: 0,
+  lengthFeet: 0,
+  lengthInches: 0,
+});
 
 export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
   const { user } = useAuthWithRole();
   const [customer, setCustomer] = useState({ name: "", address: "", phone: "", email: "" });
-  const [items, setItems] = useState([{ ...defaultItem }]);
+  const [items, setItems] = useState([makeDefaultItem()]);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [invoiceType, setInvoiceType] = useState("Sale"); // Sale, Consignment, Wash
+  const [mode, setMode] = useState<InvoiceMode>("retail-per-sqft");
+  const [discountPercentage, setDiscountPercentage] = useState(0);
 
 
-  // Calculate area for each item
-  const calculateArea = (item: any) => {
-    if (item.shape === "Rectangular") {
-      // Area = width x length (convert inches to feet)
-      const widthFt = Number(item.width) || 0;
-      const lengthFt = Number(item.length) || 0;
-      return +(widthFt * lengthFt).toFixed(2);
-    } else if (item.shape === "Round") {
-      // Area = π x (diameter/2)^2
-      const diameterFt = Number(item.diameter) || 0;
-      return +((Math.PI * Math.pow(diameterFt / 2, 2))).toFixed(2);
-    }
-    return 0;
+  // Calculate invoice using the new engine
+  const invoiceData = {
+    invoiceNumber: "PREVIEW", // or generate as needed
+    date: new Date().toISOString().slice(0, 10),
+    terms: "Due on Receipt",
+    soldTo: customer,
+    items: items.map(item => ({ ...item, id: item.id || Math.random().toString(36).slice(2) })),
+    mode,
+    discountPercentage,
   };
-
-  // Update area when item changes
-  const itemsWithArea = items.map((item) => ({
-    ...item,
-    area: calculateArea(item),
-  }));
-
-  const subtotal = itemsWithArea.reduce((sum, i) => sum + i.quantity * i.price, 0);
-  const tax = +(subtotal * 0.1).toFixed(2); // 10% tax for demo
-  const total = +(subtotal + tax).toFixed(2);
+  const calc = calculateInvoice(invoiceData);
 
   const handleItemChange = (idx: number, field: string, value: any) => {
-    setItems((prev) => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const updated = { ...item, [field]: value };
-      // Recalculate area if shape, width, length, or diameter changes
-      if (["shape", "width", "length", "diameter"].includes(field)) {
-        updated.area = calculateArea(updated);
-      }
-      return updated;
-    }));
+    setItems((prev) => prev.map((item, i) =>
+      i === idx ? { ...item, [field]: value } : item
+    ));
   };
 
-  const addItem = () => setItems((prev) => [...prev, { ...defaultItem }]);
+  const addItem = () => setItems((prev) => [...prev, makeDefaultItem()]);
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,18 +58,21 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
       await addDoc(collection(db, "invoices"), {
         userId: user?.uid,
         customer,
-        items: itemsWithArea,
-        subtotal,
-        tax,
-        total,
+        items,
+        mode,
+        discountPercentage,
+        subtotal: calc.subtotal,
+        discount: calc.discount,
+        subtotalAfterDiscount: calc.subtotalAfterDiscount,
+        salesTax: calc.salesTax,
+        totalDue: calc.totalDue,
         notes,
         paid: false,
         createdAt: Timestamp.now(),
         signature: signatureData,
-        type: invoiceType,
       });
       setCustomer({ name: "", address: "", phone: "", email: "" });
-      setItems([{ ...defaultItem }]);
+      setItems([makeDefaultItem()]);
       setNotes("");
       if (onCreated) onCreated();
     } catch (err: any) {
@@ -168,17 +156,31 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-6 bg-white dark:bg-zinc-900 p-8 rounded-xl shadow max-w-2xl mx-auto mt-8">
       <h2 className="text-2xl font-bold mb-4">Create Invoice</h2>
       <div className="mb-4">
-        <label className="block font-semibold mb-1">Invoice Type</label>
+        <label className="block font-semibold mb-1">Business Mode</label>
         <select
           className="p-2 border rounded"
-          value={invoiceType}
-          onChange={e => setInvoiceType(e.target.value)}
+          value={mode}
+          onChange={e => setMode(e.target.value as InvoiceMode)}
         >
-          <option value="Sale">Sale</option>
-          <option value="Consignment">Consignment</option>
-          <option value="Wash">Wash</option>
+          <option value="retail-per-sqft">Retail - Per Sq.Ft</option>
+          <option value="wholesale-per-sqft">Wholesale - Per Sq.Ft</option>
+          <option value="retail-per-rug">Retail - Per Rug</option>
+          <option value="wholesale-per-rug">Wholesale - Per Rug</option>
         </select>
       </div>
+      {mode.startsWith("retail") && (
+        <div className="mb-4">
+          <label className="block font-semibold mb-1">Discount (%)</label>
+          <input
+            type="number"
+            className="p-2 border rounded"
+            value={discountPercentage}
+            min={0}
+            max={100}
+            onChange={e => setDiscountPercentage(Number(e.target.value))}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <input className="p-3 border rounded" placeholder="Customer Name" value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })} required />
         <input className="p-3 border rounded" placeholder="Customer Email" value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })} required />
@@ -187,24 +189,22 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
       </div>
       <div>
         <h3 className="font-semibold mb-2">Items</h3>
-        {itemsWithArea.map((item, idx) => (
+        {items.map((item, idx) => (
           <div key={idx} className="flex gap-2 mb-2 flex-wrap items-end">
             <input className="p-2 border rounded flex-1" placeholder="Description" value={item.description} onChange={e => handleItemChange(idx, "description", e.target.value)} required />
-            <select className="p-2 border rounded" value={item.shape} onChange={e => handleItemChange(idx, "shape", e.target.value)}>
-              <option value="Rectangular">Rectangular</option>
-              <option value="Round">Round</option>
-            </select>
-            {item.shape === "Rectangular" ? (
+            {mode.endsWith("per-sqft") && (
               <>
-                <input className="p-2 border rounded w-20" type="number" min={0} step={0.01} placeholder="Width (ft)" value={item.width} onChange={e => handleItemChange(idx, "width", +e.target.value)} required />
-                <input className="p-2 border rounded w-20" type="number" min={0} step={0.01} placeholder="Length (ft)" value={item.length} onChange={e => handleItemChange(idx, "length", +e.target.value)} required />
+                <input className="p-2 border rounded w-20" type="number" min={0} placeholder="Width (ft)" value={item.widthFeet} onChange={e => handleItemChange(idx, "widthFeet", +e.target.value)} required />
+                <input className="p-2 border rounded w-20" type="number" min={0} placeholder="Width (in)" value={item.widthInches} onChange={e => handleItemChange(idx, "widthInches", +e.target.value)} required />
+                <input className="p-2 border rounded w-20" type="number" min={0} placeholder="Length (ft)" value={item.lengthFeet} onChange={e => handleItemChange(idx, "lengthFeet", +e.target.value)} required />
+                <input className="p-2 border rounded w-20" type="number" min={0} placeholder="Length (in)" value={item.lengthInches} onChange={e => handleItemChange(idx, "lengthInches", +e.target.value)} required />
+                <input className="p-2 border rounded w-28" type="number" min={0} step={0.01} placeholder="Price/Sq.Ft" value={item.pricePerSqFt} onChange={e => handleItemChange(idx, "pricePerSqFt", +e.target.value)} required />
               </>
-            ) : (
-              <input className="p-2 border rounded w-20" type="number" min={0} step={0.01} placeholder="Diameter (ft)" value={item.diameter} onChange={e => handleItemChange(idx, "diameter", +e.target.value)} required />
+            )}
+            {mode.endsWith("per-rug") && (
+              <input className="p-2 border rounded w-28" type="number" min={0} step={0.01} placeholder="Fixed Price" value={item.fixedPrice} onChange={e => handleItemChange(idx, "fixedPrice", +e.target.value)} required />
             )}
             <input className="p-2 border rounded w-20" type="number" min={1} placeholder="Qty" value={item.quantity} onChange={e => handleItemChange(idx, "quantity", +e.target.value)} required />
-            <input className="p-2 border rounded w-28" type="number" min={0} step={0.01} placeholder="Price" value={item.price} onChange={e => handleItemChange(idx, "price", +e.target.value)} required />
-            <span className="px-2">Area: {item.area} sq ft</span>
             {items.length > 1 && (
               <button type="button" onClick={() => removeItem(idx)} className="text-red-500 font-bold px-2">×</button>
             )}
@@ -213,9 +213,15 @@ export default function InvoiceForm({ onCreated }: { onCreated?: () => void }) {
         <button type="button" onClick={addItem} className="mt-2 px-4 py-1 bg-blue-100 text-blue-700 rounded">Add Item</button>
       </div>
       <div className="flex flex-col gap-2">
-        <div className="flex justify-between"><span>Subtotal:</span><span>{subtotal.toFixed(2)}</span></div>
-        <div className="flex justify-between"><span>Tax (10%):</span><span>{tax.toFixed(2)}</span></div>
-        <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>{total.toFixed(2)}</span></div>
+        <div className="flex justify-between"><span>Subtotal:</span><span>{calc.subtotal.toFixed(2)}</span></div>
+        {mode.startsWith("retail") && (
+          <>
+            <div className="flex justify-between"><span>Discount:</span><span>{calc.discount.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Subtotal After Discount:</span><span>{calc.subtotalAfterDiscount.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Sales Tax (6%):</span><span>{calc.salesTax.toFixed(2)}</span></div>
+          </>
+        )}
+        <div className="flex justify-between font-bold text-lg"><span>Total Due:</span><span>{calc.totalDue.toFixed(2)}</span></div>
       </div>
       <textarea className="p-3 border rounded w-full" placeholder="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} />
       <SignaturePad />
