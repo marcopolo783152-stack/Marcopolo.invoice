@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:dev": "concurrently \"next dev\" \"electron .\"",
+    "electron:build": "next build && next export && electron-builder",
+    "capactor:init": "npx cap init rug-invoice-system com.rugbusiness.invoice",
+    "capactor:add:android": "npx cap add android",
+    "capactor:build": "next build && next export && npx cap sync android && npx cap open android"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.9.0",

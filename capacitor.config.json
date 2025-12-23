@@ -1,0 +1,9 @@
+{
+  "appId": "com.rugbusiness.invoice",
+  "appName": "Rug Invoice System",
+  "bundledWebRuntime": false,
+  "npmClient": "npm",
+  "webDir": "out",
+  "plugins": {},
+  "cordova": {}
+}
